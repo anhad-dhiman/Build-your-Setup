@@ -1,8 +1,8 @@
-# MyRig
+# Build your Setup
 
-**Design the rig that fits you.**
+**Design the setup that fits you.**
 
-MyRig is two things sharing one catalog:
+Build your setup is two things sharing one catalog:
 
 1. a **store** — browse parts and accessories, wishlist, cart, place orders, with real accounts; and
 2. a **planner** — a quiz that recommends a whole gaming setup from the games you play, your budget and your style, with scores and an upgrade path.
@@ -22,14 +22,14 @@ still genuinely unproven.
 
 ---
 
-## How MyRig is different from PCPartPicker
+## How Build your setup is different from PCPartPicker
 
-PCPartPicker focuses on PC parts, prices and compatibility. MyRig checks compatibility too —
+PCPartPicker focuses on PC parts, prices and compatibility. Build your setup checks compatibility too —
 socket, memory generation and power draw — but uses realistic *sample* prices rather than
 live retail ones, so it does not compete on price tracking.
 
 > **PCPartPicker helps users build a PC.
-> MyRig helps users design a full gaming setup based on what games they play, their
+> Build your setup helps users design a full gaming setup based on what games they play, their
 > budget, and their setup style.**
 
 | | What it means |
@@ -40,7 +40,7 @@ live retail ones, so it does not compete on price tracking.
 | **Beginner learning area** | Plain-language explanations of every part, and inline notes next to each recommendation. |
 | **Setup scores** | Five scores out of 100, each with its reasoning written out. |
 | **Upgrade path** | What to buy next, in what order, roughly what it costs, and why. |
-| **Can I Run It?** | Search a real game; MyRig works out what it needs and what that rig costs. |
+| **Can I Run It?** | Search a real game; Build your setup works out what it needs and what that Build your setup costs. |
 | **Compatibility is a hard constraint** | The CPU always fits the motherboard, the memory always matches the board, and the PSU always covers the draw with headroom. Incompatible parts are filtered out *before* scoring, so an unassemblable build cannot be produced — see [Compatibility](#compatibility). |
 
 ---
@@ -198,7 +198,7 @@ GET  /api/auth/me      → 200 {"user":null}      # being signed out is not an e
 
 Getting the database *running* is Steps 2–3 above. This is about changing what is *in* it.
 
-**`db/catalog.js` is the single source of truth.** To change what MyRig sells or recommends,
+**`db/catalog.js` is the single source of truth.** To change what Build your setup sells or recommends,
 edit that file and re-run `npm run db:setup`.
 
 `db/seed.sql` is a **generated** file (`npm run db:gen-seed`). It exists so the catalog can
@@ -381,7 +381,7 @@ browser).
 
 ## Compatibility
 
-MyRig will not recommend a build that cannot be assembled. Three rules, all in
+Build your setup will not recommend a build that cannot be assembled. Three rules, all in
 `api/_lib/engine.js`:
 
 | Rule | Means |
@@ -416,7 +416,7 @@ an unqualified promise.
   against.
 - **The budget caps rose ~$150 per tier when this landed.** A build now has to include a
   motherboard and a PSU, which it always really needed. At the old $900 cap the extra parts
-  pushed every desk accessory out of the budget — which broke the one thing MyRig claims
+  pushed every desk accessory out of the budget — which broke the one thing Build your setup claims
   over PCPartPicker.
 - **`'Intel i7 / Ryzen 7 Class CPU'` had to be split** into separate Intel and AMD products.
   One part cannot be both `LGA1700` and `AM5`.
