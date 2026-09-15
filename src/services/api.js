@@ -1,0 +1,159 @@
+/**
+ * The only place in the frontend that talks to the network.
+ *
+ * Every call goes to our own /api/* serverless routes. The browser never calls
+ * IGDB or Neon directly - it has no key for either, by design.
+ *
+ * `credentials: 'same-origin'` is what carries the session cookie. The cookie is
+ * httpOnly, so this file cannot read it, and neither can any script injected
+ * into the page - which is the point.
+ */
+
+async function request(path, options = {}) {
+  let response
+  try {
+    response = await fetch(path, {
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      ...options,
+    })
+  } catch {
+    throw new Error('Could not reach the server. Check your connection and try again.')
+  }
+
+  let payload = null
+  try {
+    payload = await response.json()
+  } catch {
+    // Non-JSON response (e.g. an HTML error page).
+  }
+
+  if (!response.ok) {
+    const error = new Error(payload?.error || `Request failed (${response.status}).`)
+    error.status = response.status
+    throw error
+  }
+
+  return payload
+}
+
+const post = (path, body) => request(path, { method: 'POST', body: JSON.stringify(body) })
+
+// ---------------------------------------------------------------- auth
+export const register = (credentials) => post('/api/auth/register', credentials).then((r) => r.user)
+export const login = (credentials) => post('/api/auth/login', credentials).then((r) => r.user)
+export const logout = () => post('/api/auth/logout', {})
+export const me = () => request('/api/auth/me').then((r) => r.user)
+
+/** Change name and/or email. currentPassword is required when email changes. */
+export const updateProfile = (patch) => post('/api/auth/update-profile', patch).then((r) => r.user)
+
+/** Change password. Requires the current one; the session stays valid. */
+export const changePassword = (payload) => post('/api/auth/change-password', payload)
+
+// ---------------------------------------------------------------- store
+/** @param filters { category, kind, q, min, max, sort } - all optional */
+export function getProducts(filters = {}) {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== '' && value !== null && value !== undefined) params.set(key, value)
+  }
+  const query = params.toString()
+  return request(`/api/products${query ? `?${query}` : ''}`)
+}
+
+// ---------------------------------------------------------------- games
+export const searchGames = (query) =>
+  request(`/api/games/search?q=${encodeURIComponent(query)}`).then((r) => r.games || [])
+
+export const getGame = (id) => request(`/api/games/${encodeURIComponent(id)}`).then((r) => r.game)
+
+/** "Can I Run It?" - what this game needs, and what it costs. */
+export const canIRun = (gameId) => post('/api/can-i-run', { gameId })
+
+// ---------------------------------------------------------------- planner
+export const generateSetup = (quiz) => post('/api/recommend', quiz)
+
+export const getLearningCards = () => request('/api/learning').then((r) => r.learningCards || [])
+
+// ---------------------------------------------------------------- account data
+export const listBuilds = () => request('/api/builds').then((r) => r.builds || [])
+export const saveBuild = (build) => post('/api/builds', build).then((r) => r.build)
+export const deleteBuild = (id) =>
+  request(`/api/builds?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+
+export const listWishlist = () => request('/api/wishlist').then((r) => r.items || [])
+export const addToWishlist = (productId) => post('/api/wishlist', { productId })
+export const removeFromWishlist = (productId) =>
+  request(`/api/wishlist?productId=${encodeURIComponent(productId)}`, { method: 'DELETE' })
+
+export const listOrders = () => request('/api/orders').then((r) => r.orders || [])
+/** @param items [{ productId, quantity }] - prices are decided by the server, not us. */
+export const placeOrder = (items) => post('/api/orders', { items }).then((r) => r.order)
+
+// ---------------------------------------------------------------- site chrome
+/** Public map of admin-uploaded site images, `{ key: url }`. */
+export const getSiteImages = () => request('/api/site-images').then((r) => r.images || {})
+
+// ---------------------------------------------------------------- admin
+/**
+ * Upload a product image (admin-only).
+ * @param productId  number
+ * @param file       File from an <input type="file">
+ * @returns { imageUrl }
+ */
+export async function uploadProductImage(productId, file) {
+  const dataBase64 = await fileToBase64(file)
+  return post('/api/admin/upload-product-image', {
+    productId,
+    filename: file.name,
+    contentType: file.type,
+    dataBase64,
+  })
+}
+
+/**
+ * Upload a site chrome image (admin-only).
+ * @param key   named slot, e.g. 'home_hero'
+ * @param file  File from an <input type="file">
+ * @returns { key, imageUrl }
+ */
+export async function uploadSiteImage(key, file) {
+  const dataBase64 = await fileToBase64(file)
+  return post('/api/admin/upload-site-image', {
+    key,
+    filename: file.name,
+    contentType: file.type,
+    dataBase64,
+  })
+}
+
+/**
+ * Upload a learning-card image (admin-only).
+ * @param cardId  number   learning_cards.id
+ * @param file    File from an <input type="file">
+ * @returns { imageUrl }
+ */
+export async function uploadLearningCardImage(cardId, file) {
+  const dataBase64 = await fileToBase64(file)
+  return post('/api/admin/upload-learning-card-image', {
+    cardId,
+    filename: file.name,
+    contentType: file.type,
+    dataBase64,
+  })
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('Could not read the file.'))
+    reader.onload = () => {
+      // readAsDataURL gives "data:<type>;base64,<data>" — strip the prefix.
+      const result = reader.result
+      const comma = result.indexOf(',')
+      resolve(comma === -1 ? result : result.slice(comma + 1))
+    }
+    reader.readAsDataURL(file)
+  })
+}
